@@ -113,6 +113,7 @@
         let totalGoldUsed = 0;
         let autoEnhancing = false;
         let cheatMode = false; // 作弊模式标志
+        let autoEnhanceInterval;
 
         const stageElement = document.getElementById('stage');
         const probabilitiesElement = document.getElementById('probabilities');
@@ -173,6 +174,7 @@
 
             if (currentStage >= 10) {
                 autoEnhancing = false;
+                clearInterval(autoEnhanceInterval);
                 resultElement.innerText = '恭喜你达到了最高阶段！';
                 enhanceBtn.disabled = true;
                 autoEnhanceBtn.disabled = true;
@@ -184,14 +186,22 @@
         enhanceBtn.addEventListener('click', enhance);
 
         autoEnhanceBtn.addEventListener('click', function() {
-            autoEnhancing = true;
-            function autoEnhance() {
-                if (autoEnhancing && currentStage < 10) {
-                    enhance();
-                    setTimeout(autoEnhance, 500); // 每0.5秒自动磨炼一次
+            if (autoEnhancing) {
+                autoEnhancing = false;
+                clearInterval(autoEnhanceInterval);
+                autoEnhanceBtn.innerText = '自动磨炼';
+                resultElement.innerText = '自动磨炼已停止。';
+            } else {
+                autoEnhancing = true;
+                autoEnhanceBtn.innerText = '停止自动磨炼';
+                function autoEnhance() {
+                    if (autoEnhancing && currentStage < 10) {
+                        enhance();
+                        setTimeout(autoEnhance, 500); // 每0.5秒自动磨炼一次
+                    }
                 }
+                autoEnhanceInterval = setInterval(autoEnhance, 500); // 设置定时器
             }
-            autoEnhance();
         });
 
         cheatBtn.addEventListener('click', function() {

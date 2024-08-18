@@ -2,7 +2,7 @@
 
 
 git add .
-git commit -m "Update file."
+git commit -m "Add stop button！"
 git remote set-url origin git@github.com:mininng/AusitM0ge.git
 git push -u origin main
 
