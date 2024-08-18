@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>磨炼模拟器</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
     <style>
         body {
             margin: 0;
@@ -55,7 +54,7 @@
         #resetBtn:hover {
             background-color: #c0392b;
         }
-        #materials, #totalUsed, #highestStage {
+        #materials, #totalUsed, #highestStage, #totalAttempts {
             background-color: #f9f9f9;
             padding: 10px;
             border-radius: 8px;
@@ -90,12 +89,12 @@
 <body>
     <div id="content">
         <h1>磨炼模拟器</h1>
-        <p id="stage">当前磨炼数值: 0</p>
+        <p id="stage">当前磨炼等级: 0</p>
         <p id="probabilities">概率 - 成功: 45%, 维持: 55%, 失败: 0%, 破坏: 0%</p>
         <p id="materials">
-            催化剂: 2<br>
-            高级莱恩矿石: 3<br>
-            金币: 6,200,000 金币
+            催化剂: <span id="catalysts">2</span><br>
+            高级莱恩矿石: <span id="sangrako">3</span><br>
+            金币: <span id="gold">6,200,000</span> 金币
         </p>
         
         <!-- 按钮行 -->
@@ -113,14 +112,19 @@
 
         <p id="result"></p>
         <p id="totalUsed">
-            到目前为止消耗的催化剂: 0<br>
-            到目前为止消耗的高级莱恩矿石: 0<br>
-            到目前为止消耗的金币: 0
+            到目前为止消耗的催化剂: <span id="totalCatalystsUsed">0</span><br>
+            到目前为止消耗的高级莱恩矿石: <span id="totalSangrakoUsed">0</span><br>
+            到目前为止消耗的金币: <span id="totalGoldUsed">0</span>
         </p>
-        <p id="highestStage">到目前为止成功的最高磨炼阶段: 0</p>
+        <p id="highestStage">到目前为止成功的最高磨炼阶段: <span id="highestStageValue">0</span></p>
+        <p id="totalAttempts">总磨炼次数: <span id="totalAttemptsValue">0</span></p>
     </div>
 
     <script>
+        function formatNumber(num) {
+            return num.toLocaleString();
+        }
+
         const stages = [
             { success: 45, maintain: 55, fail: 0, destroy: 0, catalysts: 2, sangrako: 3, gold: 6200000 },
             { success: 30, maintain: 40, fail: 30, destroy: 0, catalysts: 2, sangrako: 3, gold: 7502000 },
@@ -139,6 +143,7 @@
         let totalCatalystsUsed = 0;
         let totalSangrakoUsed = 0;
         let totalGoldUsed = 0;
+        let totalAttempts = 0;
         let autoMode = false;
         let targetStage = 10; // 默认目标阶段为 10
         let autoModeType = ''; // 'auto' or 'toTarget'
@@ -146,11 +151,16 @@
 
         function updateUI() {
             const stageData = stages[currentStage] || stages[0];
-            document.getElementById('stage').innerText = `当前磨炼数值: ${currentStage}`;
+            document.getElementById('stage').innerText = `当前磨炼等级: ${currentStage}`;
             document.getElementById('probabilities').innerText = `概率 - 成功: ${stageData.success}%, 维持: ${stageData.maintain}%, 失败: ${stageData.fail}%, 破坏: ${stageData.destroy}%`;
-            document.getElementById('materials').innerHTML = `催化剂: ${stageData.catalysts}<br>高级莱恩矿石: ${stageData.sangrako}<br>金币: ${stageData.gold.toLocaleString()} 金币`;
-            document.getElementById('totalUsed').innerHTML = `到目前为止消耗的催化剂: ${totalCatalystsUsed.toLocaleString()}<br>到目前为止消耗的高级莱恩矿石: ${totalSangrakoUsed.toLocaleString()}<br>到目前为止消耗的金币: ${totalGoldUsed.toLocaleString()}`;
-            document.getElementById('highestStage').innerText = `到目前为止成功的最高磨炼阶段: ${highestStage}`;
+            document.getElementById('catalysts').innerText = formatNumber(stageData.catalysts);
+            document.getElementById('sangrako').innerText = formatNumber(stageData.sangrako);
+            document.getElementById('gold').innerText = formatNumber(stageData.gold);
+            document.getElementById('totalCatalystsUsed').innerText = formatNumber(totalCatalystsUsed);
+            document.getElementById('totalSangrakoUsed').innerText = formatNumber(totalSangrakoUsed);
+            document.getElementById('totalGoldUsed').innerText = formatNumber(totalGoldUsed);
+            document.getElementById('highestStageValue').innerText = formatNumber(highestStage);
+            document.getElementById('totalAttemptsValue').innerText = formatNumber(totalAttempts);
         }
 
         function enhance() {
@@ -161,6 +171,7 @@
             totalCatalystsUsed += stageData.catalysts;
             totalSangrakoUsed += stageData.sangrako;
             totalGoldUsed += stageData.gold;
+            totalAttempts++;
 
             if (document.getElementById('cheatBtn').classList.contains('active')) {
                 currentStage++;
@@ -172,10 +183,10 @@
                     currentStage++;
                     document.getElementById('result').innerText = '成功! 阶段上升。';
                 } else if (random < stageData.success + stageData.maintain) {
-                    document.getElementById('result').innerText = '维持!';
+                    document.getElementById('result').innerText = '维持! 磨炼阶段不变。';
                 } else if (random < stageData.success + stageData.maintain + stageData.fail) {
                     currentStage--;
-                    document.getElementById('result').innerText = '失败!';
+                    document.getElementById('result').innerText = '失败! 磨炼阶段不变。';
                 } else {
                     currentStage = 0;
                     document.getElementById('result').innerText = '磨炼破坏!';
@@ -256,11 +267,12 @@
             totalCatalystsUsed = 0;
             totalSangrakoUsed = 0;
             totalGoldUsed = 0;
+            totalAttempts = 0;
             document.getElementById('enhanceBtn').disabled = false;
             document.getElementById('toggleAutoBtn').disabled = false;
             document.getElementById('cheatBtn').disabled = false;
             document.getElementById('result').innerText = '重置成功，当前磨炼值已归零。';
-            //document.getElementById('resetBtn').style.display = 'none'; // 隐藏重置按钮
+            document.getElementById('resetBtn').style.display = 'inline-block';
             updateUI();
         });
 
