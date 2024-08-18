@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精炼模拟器</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        #content {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h1 {
+            font-size: 2em;
+            color: #4a90e2;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.2em;
+            line-height: 1.5;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #4a90e2;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #357ABD;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #resetBtn {
+            background-color: #e74c3c;
+        }
+        #resetBtn:hover {
+            background-color: #c0392b;
+        }
+        #materials, #totalUsed, #highestStage, #totalAttempts {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: #e67e22;
+        }
+        .button-row, .input-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .input-row {
+            align-items: center;
+        }
+        .input-row label {
+            display: inline-block;
+            width: 150px;
+            text-align: left;
+        }
+        .input-row input {
+            font-size: 1em;
+            padding: 5px;
+            width: 200px; /* 拉长输入框 */
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .input-row button {
+            width: auto; /* 确保按钮宽度适应内容 */
+        }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <h1>精炼模拟器</h1>
+        <p id="stage">当前精炼等级: 0</p>
+        <p id="probabilities">概率 - 成功: 45%, 维持: 55%, 失败: 0%, 破坏: 0%</p>
+        <p id="materials">
+            催化剂: <span id="catalysts">2</span><br>
+            高级莱恩矿石: <span id="sangrako">3</span><br>
+            金币: <span id="gold">6,200,000</span> 金币
+        </p>
+        
+        <!-- 按钮行 -->
+        <div class="button-row">
+            <button id="enhanceBtn">精炼</button>
+            <button id="cheatBtn">作弊</button>
+            <button id="resetBtn">重置</button>
+        </div>
+
+        <!-- 自动精炼控制区域 -->
+        <div class="input-row">
+            <label for="targetInput">目标阶段</label>
+            <input type="number" id="targetInput" min="1" max="10" placeholder="目标阶段" title="目标精炼阶段">
+        </div>
+        <div class="input-row">
+            <label for="intervalInput">精炼间隔时间 (秒)</label>
+            <input type="number" id="intervalInput" min="0.01" step="0.01" placeholder="间隔时间" title="精炼间隔时间" value="1">
+        </div>
+        <div class="input-row">
+            <button id="toggleAutoBtn">开始自动精炼</button>
+        </div>
+
+        <p id="result"></p>
+        <p id="totalUsed">
+            到目前为止消耗的催化剂: <span id="totalCatalystsUsed">0</span><br>
+            到目前为止消耗的高级莱恩矿石: <span id="totalSangrakoUsed">0</span><br>
+            到目前为止消耗的金币: <span id="totalGoldUsed">0</span>
+        </p>
+        <p id="highestStage">到目前为止成功的最高精炼阶段: <span id="highestStageValue">0</span></p>
+        <p id="totalAttempts">总精炼次数: <span id="totalAttemptsValue">0</span></p>
+    </div>
+
+    <script>
+        function formatNumber(num) {
+            return num.toLocaleString();
+        }
+
+        function formatDecimal(num, decimals) {
+            return num.toFixed(decimals);
+        }
+
+        const stages = [
+            { success: 45, maintain: 55, fail: 0, destroy: 0, catalysts: 2, sangrako: 3, gold: 6200000 },
+            { success: 30, maintain: 40, fail: 30, destroy: 0, catalysts: 2, sangrako: 3, gold: 7502000 },
+            { success: 22, maintain: 46, fail: 30, destroy: 2, catalysts: 2, sangrako: 4, gold: 8900700 },
+            { success: 20, maintain: 45, fail: 30, destroy: 5, catalysts: 3, sangrako: 4, gold: 10427000 },
+            { success: 17, maintain: 44, fail: 30, destroy: 9, catalysts: 3, sangrako: 5, gold: 12254000 },
+            { success: 15, maintain: 42, fail: 30, destroy: 13, catalysts: 3, sangrako: 5, gold: 13979000 },
+            { success: 13, maintain: 44, fail: 30, destroy: 17, catalysts: 4, sangrako: 6, gold: 15806000 },
+            { success: 11, maintain: 46, fail: 30, destroy: 21, catalysts: 4, sangrako: 6, gold: 17781000 },
+            { success: 9, maintain: 48, fail: 30, destroy: 25, catalysts: 4, sangrako: 7, gold: 19881000 },
+            { success: 7, maintain: 50, fail: 30, destroy: 29, catalysts: 5, sangrako: 7, gold: 22136000 }
+        ];
+
+        let currentStage = 0;
+        let highestStage = 0;
+        let totalCatalystsUsed = 0;
+        let totalSangrakoUsed = 0;
+        let totalGoldUsed = 0;
+        let totalAttempts = 0;
+        let autoMode = false;
+        let targetStage = 10; // 默认目标阶段为 10
+        let autoModeType = ''; // 'auto' or 'toTarget'
+        let autoEnhanceInterval;
+        let intervalTime = 1000; // 默认精炼间隔时间为 1 秒
+
+        function updateUI() {
+            const stageData = stages[currentStage] || stages[0];
+            document.getElementById('stage').innerText = `当前精炼等级: ${currentStage}`;
+            document.getElementById('probabilities').innerText = `概率 - 成功: ${stageData.success}%, 维持: ${stageData.maintain}%, 失败: ${stageData.fail}%, 破坏: ${stageData.destroy}%`;
+            document.getElementById('catalysts').innerText = formatNumber(stageData.catalysts);
+            document.getElementById('sangrako').innerText = formatNumber(stageData.sangrako);
+            document.getElementById('gold').innerText = formatNumber(stageData.gold);
+            document.getElementById('totalCatalystsUsed').innerText = formatNumber(totalCatalystsUsed);
+            document.getElementById('totalSangrakoUsed').innerText = formatNumber(totalSangrakoUsed);
+            document.getElementById('totalGoldUsed').innerText = formatNumber(totalGoldUsed);
+            document.getElementById('highestStageValue').innerText = formatNumber(highestStage);
+            document.getElementById('totalAttemptsValue').innerText = formatNumber(totalAttempts);
+        }
+
+        function enhance() {
+            if (currentStage >= 10) return;
+
+            const stageData = stages[currentStage] || stages[0];
+
+            totalCatalystsUsed += stageData.catalysts;
+            totalSangrakoUsed += stageData.sangrako;
+            totalGoldUsed += stageData.gold;
+            totalAttempts++;
+
+            if (document.getElementById('cheatBtn').classList.contains('active')) {
+                currentStage++;
+                document.getElementById('result').innerText = '作弊成功! 精炼阶段上升。';
+            } else {
+                const random = Math.random() * 100;
+
+                if (random < stageData.success) {
+                    currentStage++;
+                    document.getElementById('result').innerText = '成功! 阶段上升。';
+                } else if (random < stageData.success + stageData.maintain) {
+                    document.getElementById('result').innerText = '维持! 精炼阶段不变。';
+                } else if (random < stageData.success + stageData.maintain + stageData.fail) {
+                    currentStage--;
+                    document.getElementById('result').innerText = '失败! 精炼阶段不变。';
+                } else {
+                    currentStage = 0;
+                    document.getElementById('result').innerText = '精炼破坏!';
+                }
+            }
+
+            if (currentStage > highestStage) {
+                highestStage = currentStage;
+            }
+
+            updateUI();
+
+            if (currentStage >= 10) {
+                autoMode = false;
+                autoModeType = '';
+                document.getElementById('toggleAutoBtn').innerText = '开始自动精炼';
+                document.getElementById('result').innerText = '恭喜你达到了最高阶段！';
+                document.getElementById('enhanceBtn').disabled = true;
+                document.getElementById('toggleAutoBtn').disabled = true;
+                document.getElementById('cheatBtn').disabled = true;
+                document.getElementById('resetBtn').style.display = 'inline-block';
+            }
+        }
+
+        function autoEnhance() {
+            if (autoMode) {
+                if (autoModeType === 'auto' && currentStage < 10) {
+                    enhance();
+                    autoEnhanceInterval = setTimeout(autoEnhance, intervalTime);
+                } else if (autoModeType === 'toTarget' && currentStage < targetStage) {
+                    enhance();
+                    autoEnhanceInterval = setTimeout(autoEnhance, intervalTime);
+                } else {
+                    autoMode = false;
+                    autoModeType = '';
+                    document.getElementById('toggleAutoBtn').innerText = '开始自动精炼';
+                    document.getElementById('result').innerText = '自动精炼结束';
+                    clearTimeout(autoEnhanceInterval);
+                }
+            }
+        }
+
+        document.getElementById('enhanceBtn').addEventListener('click', enhance);
+
+        document.getElementById('toggleAutoBtn').addEventListener('click', function() {
+            if (!autoMode) {
+                const targetInput = document.getElementById('targetInput');
+                let target = parseInt(targetInput.value, 10);
+                if (isNaN(target) || target < 1 || target > 10) {
+                    target = 10; // 默认目标阶段为 10
+                    document.getElementById('result').innerText = '未输入目标阶段，自动设置为最高阶段10。';
+                }
+                targetInput.value = target; // 显示目标阶段
+                targetStage = target;
+
+                const intervalInput = document.getElementById('intervalInput');
+                let interval = parseFloat(intervalInput.value);
+                if (isNaN(interval) || interval <= 0) {
+                    interval = 1; // 默认间隔时间为 1 秒
+                }
+                intervalTime = interval * 1000; // 转换为毫秒
+
+                // 限制最小时间间隔为 10ms
+                if (intervalTime < 10) {
+                    intervalTime = 10;
+                    intervalInput.value = formatDecimal(intervalTime / 1000, 2); // 更新输入框的显示值
+                    document.getElementById('result').innerText = '时间间隔过小，已自动设置为最小间隔 10ms。';
+                } else {
+                    intervalInput.value = formatDecimal(interval, 2); // 格式化为最多两位小数
+                }
+
+                autoModeType = target === 10 ? 'auto' : 'toTarget';
+                autoMode = true;
+                this.innerText = '停止自动精炼';
+                autoEnhance();
+            } else {
+                autoMode = false;
+                this.innerText = '开始自动精炼';
+                document.getElementById('result').innerText = '自动精炼已停止';
+                clearTimeout(autoEnhanceInterval);
+            }
+        });
+
+        document.getElementById('cheatBtn').addEventListener('click', function() {
+            this.classList.toggle('active');
+            document.getElementById('result').innerText = this.classList.contains('active') ? '作弊模式已激活: 下一次精炼必定成功!' : '作弊模式已关闭';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            autoMode = false;
+            autoModeType = '';
+            clearTimeout(autoEnhanceInterval);
+            currentStage = 0;
+            highestStage = 0;
+            totalCatalystsUsed = 0;
+            totalSangrakoUsed = 0;
+            totalGoldUsed = 0;
+            totalAttempts = 0;
+            document.getElementById('enhanceBtn').disabled = false;
+            document.getElementById('toggleAutoBtn').disabled = false;
+            document.getElementById('cheatBtn').disabled = false;
+            document.getElementById('toggleAutoBtn').innerText = '开始自动精炼'; // 重置按钮文字
+            document.getElementById('result').innerText = '重置成功，当前精炼值已归零。';
+            document.getElementById('resetBtn').style.display = 'inline-block';
+            updateUI();
+        });
+
+        // 初始加载时设置精炼间隔时间的默认值
+        document.getElementById('intervalInput').value = formatDecimal(intervalTime / 1000, 2);
+
+        updateUI();
+    </script>
+</body>
+</html>
