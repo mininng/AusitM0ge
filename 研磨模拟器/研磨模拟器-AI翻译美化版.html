@@ -67,6 +67,24 @@
             font-size: 1.5em;
             color: #e67e22;
         }
+        .button-row, .input-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .input-row input {
+            font-size: 1em;
+            padding: 5px;
+            width: 150px; /* 调整宽度以显示完整的提示文字 */
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .input-row button {
+            width: auto; /* 确保按钮宽度适应内容 */
+        }
     </style>
 </head>
 <body>
@@ -79,9 +97,20 @@
             高级莱恩矿石: 3<br>
             金币: 6,200,000 金币
         </p>
-        <button id="enhanceBtn">磨炼</button>
-        <button id="autoEnhanceBtn">自动磨炼</button>
-        <button id="cheatBtn">作弊</button>
+        
+        <!-- 按钮行 -->
+        <div class="button-row">
+            <button id="enhanceBtn">磨炼</button>
+            <button id="cheatBtn">作弊</button>
+            <button id="resetBtn">重置</button>
+        </div>
+
+        <!-- 自动磨炼控制区域 -->
+        <div class="input-row">
+            <input type="number" id="targetInput" min="1" max="10" placeholder="目标阶段" title="目标磨炼阶段">
+            <button id="toggleAutoBtn">开始自动磨炼</button>
+        </div>
+
         <p id="result"></p>
         <p id="totalUsed">
             到目前为止消耗的催化剂: 0<br>
@@ -89,7 +118,6 @@
             到目前为止消耗的金币: 0
         </p>
         <p id="highestStage">到目前为止成功的最高磨炼阶段: 0</p>
-        <button id="resetBtn" style="display: none;">重置</button>
     </div>
 
     <script>
@@ -111,58 +139,46 @@
         let totalCatalystsUsed = 0;
         let totalSangrakoUsed = 0;
         let totalGoldUsed = 0;
-        let autoEnhancing = false;
-        let cheatMode = false; // 作弊模式标志
+        let autoMode = false;
+        let targetStage = 10; // 默认目标阶段为 10
+        let autoModeType = ''; // 'auto' or 'toTarget'
         let autoEnhanceInterval;
 
-        const stageElement = document.getElementById('stage');
-        const probabilitiesElement = document.getElementById('probabilities');
-        const materialsElement = document.getElementById('materials');
-        const resultElement = document.getElementById('result');
-        const totalUsedElement = document.getElementById('totalUsed');
-        const highestStageElement = document.getElementById('highestStage');
-        const enhanceBtn = document.getElementById('enhanceBtn');
-        const autoEnhanceBtn = document.getElementById('autoEnhanceBtn');
-        const cheatBtn = document.getElementById('cheatBtn');
-        const resetBtn = document.getElementById('resetBtn');
-
         function updateUI() {
-            const stageData = stages[currentStage];
-            stageElement.innerText = `当前磨炼数值: ${currentStage}`;
-            probabilitiesElement.innerText = `概率 - 成功: ${stageData.success}%, 维持: ${stageData.maintain}%, 失败: ${stageData.fail}%, 破坏: ${stageData.destroy}%`;
-            materialsElement.innerHTML = `催化剂: ${stageData.catalysts}<br>高级莱恩矿石: ${stageData.sangrako}<br>金币: ${stageData.gold.toLocaleString()} 金币`;
-            totalUsedElement.innerHTML = `到目前为止消耗的催化剂: ${totalCatalystsUsed.toLocaleString()}<br>到目前为止消耗的高级莱恩矿石: ${totalSangrakoUsed.toLocaleString()}<br>到目前为止消耗的金币: ${totalGoldUsed.toLocaleString()}`;
-            highestStageElement.innerText = `到目前为止成功的最高磨炼阶段: ${highestStage}`;
+            const stageData = stages[currentStage] || stages[0];
+            document.getElementById('stage').innerText = `当前磨炼数值: ${currentStage}`;
+            document.getElementById('probabilities').innerText = `概率 - 成功: ${stageData.success}%, 维持: ${stageData.maintain}%, 失败: ${stageData.fail}%, 破坏: ${stageData.destroy}%`;
+            document.getElementById('materials').innerHTML = `催化剂: ${stageData.catalysts}<br>高级莱恩矿石: ${stageData.sangrako}<br>金币: ${stageData.gold.toLocaleString()} 金币`;
+            document.getElementById('totalUsed').innerHTML = `到目前为止消耗的催化剂: ${totalCatalystsUsed.toLocaleString()}<br>到目前为止消耗的高级莱恩矿石: ${totalSangrakoUsed.toLocaleString()}<br>到目前为止消耗的金币: ${totalGoldUsed.toLocaleString()}`;
+            document.getElementById('highestStage').innerText = `到目前为止成功的最高磨炼阶段: ${highestStage}`;
         }
 
         function enhance() {
             if (currentStage >= 10) return;
 
-            const stageData = stages[currentStage];
+            const stageData = stages[currentStage] || stages[0];
 
             totalCatalystsUsed += stageData.catalysts;
             totalSangrakoUsed += stageData.sangrako;
             totalGoldUsed += stageData.gold;
 
-            if (cheatMode) {
-                // 如果作弊模式开启，则强制成功
+            if (document.getElementById('cheatBtn').classList.contains('active')) {
                 currentStage++;
-                cheatMode = false; // 作弊模式在使用一次后关闭
-                resultElement.innerText = '作弊成功! 磨炼阶段上升。';
+                document.getElementById('result').innerText = '作弊成功! 磨炼阶段上升。';
             } else {
                 const random = Math.random() * 100;
 
                 if (random < stageData.success) {
                     currentStage++;
-                    resultElement.innerText = '成功! 阶段上升。';
+                    document.getElementById('result').innerText = '成功! 阶段上升。';
                 } else if (random < stageData.success + stageData.maintain) {
-                    resultElement.innerText = '维持!';
+                    document.getElementById('result').innerText = '维持!';
                 } else if (random < stageData.success + stageData.maintain + stageData.fail) {
                     currentStage--;
-                    resultElement.innerText = '失败!';
+                    document.getElementById('result').innerText = '失败!';
                 } else {
                     currentStage = 0;
-                    resultElement.innerText = '磨炼破坏!';
+                    document.getElementById('result').innerText = '磨炼破坏!';
                 }
             }
 
@@ -173,54 +189,78 @@
             updateUI();
 
             if (currentStage >= 10) {
-                autoEnhancing = false;
-                clearInterval(autoEnhanceInterval);
-                resultElement.innerText = '恭喜你达到了最高阶段！';
-                enhanceBtn.disabled = true;
-                autoEnhanceBtn.disabled = true;
-                cheatBtn.disabled = true;
-                resetBtn.style.display = 'inline-block';
+                autoMode = false;
+                autoModeType = '';
+                document.getElementById('toggleAutoBtn').innerText = '开始自动磨炼';
+                document.getElementById('result').innerText = '恭喜你达到了最高阶段！';
+                document.getElementById('enhanceBtn').disabled = true;
+                document.getElementById('toggleAutoBtn').disabled = true;
+                document.getElementById('cheatBtn').disabled = true;
+                document.getElementById('resetBtn').style.display = 'inline-block';
             }
         }
 
-        enhanceBtn.addEventListener('click', enhance);
-
-        autoEnhanceBtn.addEventListener('click', function() {
-            if (autoEnhancing) {
-                autoEnhancing = false;
-                clearInterval(autoEnhanceInterval);
-                autoEnhanceBtn.innerText = '自动磨炼';
-                resultElement.innerText = '自动磨炼已停止。';
-            } else {
-                autoEnhancing = true;
-                autoEnhanceBtn.innerText = '停止自动磨炼';
-                function autoEnhance() {
-                    if (autoEnhancing && currentStage < 10) {
-                        enhance();
-                        setTimeout(autoEnhance, 500); // 每0.5秒自动磨炼一次
-                    }
+        function autoEnhance() {
+            if (autoMode) {
+                if (autoModeType === 'auto' && currentStage < 10) {
+                    enhance();
+                    autoEnhanceInterval = setTimeout(autoEnhance, 500);
+                } else if (autoModeType === 'toTarget' && currentStage < targetStage) {
+                    enhance();
+                    autoEnhanceInterval = setTimeout(autoEnhance, 500);
+                } else {
+                    autoMode = false;
+                    autoModeType = '';
+                    document.getElementById('toggleAutoBtn').innerText = '开始自动磨炼';
+                    document.getElementById('result').innerText = '自动磨炼结束';
+                    clearTimeout(autoEnhanceInterval);
                 }
-                autoEnhanceInterval = setInterval(autoEnhance, 500); // 设置定时器
+            }
+        }
+
+        document.getElementById('enhanceBtn').addEventListener('click', enhance);
+
+        document.getElementById('toggleAutoBtn').addEventListener('click', function() {
+            if (!autoMode) {
+                const targetInput = document.getElementById('targetInput');
+                let target = parseInt(targetInput.value, 10);
+                if (isNaN(target) || target < 1 || target > 10) {
+                    target = 10; // 默认到达最高阶段
+                    document.getElementById('result').innerText = '未输入目标阶段，自动设置为最高阶段10。';
+                }
+                targetInput.value = target; // 显示目标阶段
+                targetStage = target;
+                autoModeType = target === 10 ? 'auto' : 'toTarget';
+                autoMode = true;
+                this.innerText = '停止自动磨炼';
+                autoEnhance();
+            } else {
+                autoMode = false;
+                this.innerText = '开始自动磨炼';
+                document.getElementById('result').innerText = '自动磨炼已停止';
+                clearTimeout(autoEnhanceInterval);
             }
         });
 
-        cheatBtn.addEventListener('click', function() {
-            cheatMode = true;
-            resultElement.innerText = '作弊模式已激活: 下一次磨炼必定成功!';
+        document.getElementById('cheatBtn').addEventListener('click', function() {
+            this.classList.toggle('active');
+            document.getElementById('result').innerText = this.classList.contains('active') ? '作弊模式已激活: 下一次磨炼必定成功!' : '作弊模式已关闭';
         });
 
-        resetBtn.addEventListener('click', function() {
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            autoMode = false;
+            autoModeType = '';
+            clearTimeout(autoEnhanceInterval);
             currentStage = 0;
             highestStage = 0;
             totalCatalystsUsed = 0;
             totalSangrakoUsed = 0;
             totalGoldUsed = 0;
-            autoEnhancing = false;
-            enhanceBtn.disabled = false;
-            autoEnhanceBtn.disabled = false;
-            cheatBtn.disabled = false;
-            resultElement.innerText = '';
-            resetBtn.style.display = 'none';
+            document.getElementById('enhanceBtn').disabled = false;
+            document.getElementById('toggleAutoBtn').disabled = false;
+            document.getElementById('cheatBtn').disabled = false;
+            document.getElementById('result').innerText = '重置成功，当前磨炼值已归零。';
+            //document.getElementById('resetBtn').style.display = 'none'; // 隐藏重置按钮
             updateUI();
         });
 
