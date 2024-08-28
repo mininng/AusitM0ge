@@ -3,39 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>摄像头拍照示例</title>
+    <title>自动拍照并跳转</title>
 </head>
 <body>
     <!-- 视频元素用于显示摄像头捕捉的实时视频流 -->
     <video id="video" width="320" height="240" autoplay></video>
-    <!-- 按钮用于触发拍照操作 -->
-    <button id="snap">拍照</button>
-    <!-- 画布用于显示拍摄的照片 -->
-    <canvas id="canvas" width="320" height="240"></canvas>
+    <!-- 画布用于捕获并显示拍摄的照片 -->
+    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
 
     <script>
         // 获取视频和画布元素
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
-        const snapButton = document.getElementById('snap');
 
         // 使用 navigator.mediaDevices.getUserMedia 访问摄像头
         navigator.mediaDevices.getUserMedia({ video: true })
             .then((stream) => {
                 // 将视频流赋值给视频元素
                 video.srcObject = stream;
+
+                // 等待视频加载完成
+                video.onloadedmetadata = () => {
+                    // 自动拍照
+                    takePhoto();
+                };
             })
             .catch((error) => {
                 console.error("访问摄像头失败: ", error);
             });
 
         // 拍照功能
-        snapButton.addEventListener('click', () => {
+        function takePhoto() {
             // 将视频的当前帧绘制到画布上
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        });
+
+            // 停止视频流
+            video.srcObject.getTracks().forEach(track => track.stop());
+
+            // 跳转到百度
+            window.location.href = 'https://www.baidu.com';
+        }
     </script>
 </body>
 </html>
-
