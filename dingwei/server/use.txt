@@ -1,0 +1,20 @@
+1. 安装 Node.js 和 npm
+sudo apt update
+sudo apt install nodejs npm
+node -v
+npm -v
+
+2. 创建项目目录
+mkdir my-location-app
+cd my-location-app
+
+3. 初始化 Node.js 项目
+npm init -y
+
+4. 安装依赖
+npm install express cors axios
+
+5. 上传server.js
+
+6. 运行服务器
+node server.js 

