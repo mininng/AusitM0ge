@@ -274,7 +274,35 @@
             });
         }
         }
+
+    //爆炸效果（使用不同形状的粒子）
+    function SuexplosionEffect() {
+        const container = document.getElementById('particle-container');
+        const particleCount = 40; // 粒子数量
         
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.style.position = 'absolute';
+            particle.style.left = '50%';
+            particle.style.top = '50%';
+            particle.style.width = `${gsap.utils.random(10, 20)}px`; // 随机粒子大小
+            particle.style.height = particle.style.width;
+            particle.style.background = gsap.utils.random(['#ff5733', '#ff1493', '#ff8c00', '#32cd32']);
+            particle.style.borderRadius = gsap.utils.random([0, 10, 50]) + '%'; // 随机改变形状（圆形、矩形、星形）
+            container.appendChild(particle);
+            
+            // 粒子爆炸动画
+            gsap.to(particle, {
+            duration: gsap.utils.random(0.8, 1.2),
+            x: gsap.utils.random(-200, 200),
+            y: gsap.utils.random(-200, 200),
+            scale: gsap.utils.random(0.5, 2),
+            opacity: 0,
+            ease: "power2.out",
+            onComplete: () => particle.remove()
+            });
+        }
+    }        
     // 红色闪烁覆盖层（破坏时）
     function redFlashEffect() {
       const overlay = document.getElementById('effect-overlay');
@@ -353,13 +381,15 @@
 
         // 根据结果触发特效（DNF 风格）
         if (outcomeClass === 'success') {
-          beamEffect();
-          sparkleEffect();
-          
+            //爆炸效果（使用不同形状的粒子）
+            SuexplosionEffect();
+
+            //火花效果（小颗粒向四周飞散）
+            // sparkleEffect();
+
         } else if (outcomeClass === 'destroy') {
-          redFlashEffect();
-          explosionEffect();
-          
+            redFlashEffect();
+            explosionEffect();
         }
 
         if (currentStage > highestStage) highestStage = currentStage;
