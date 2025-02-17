@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DNF 研磨模拟器</title>
+  <!-- 引入 GSAP 库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    /* 基础样式 */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', Arial, sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    #content {
+      position: relative;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      text-align: center;
+      background-color: #fff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    h1 { font-size: 2em; color: #4a90e2; margin-bottom: 20px; }
+    p { font-size: 1.2em; line-height: 1.5; }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      color: #fff;
+      background-color: #4a90e2;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover { background-color: #357ABD; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    #resetBtn { background-color: #e74c3c; }
+    #resetBtn:hover { background-color: #c0392b; }
+    #materials,
+    #totalUsed,
+    #highestStage,
+    #totalAttempts {
+      background-color: #f9f9f9;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 20px 0;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    #result { margin-top: 20px; font-size: 1.5em; }
+    .button-row, .input-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .input-row { align-items: center; }
+    .input-row label {
+      display: inline-block;
+      width: 150px;
+      text-align: left;
+    }
+    .input-row input {
+      font-size: 1em;
+      padding: 5px;
+      width: 200px;
+      text-align: center;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .input-row button { width: auto; }
+
+    /* CSS 动画样式 */
+    .enhancing { animation: blink 1s infinite; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    .success { color: gold; animation: flashSuccess 1s infinite ease-in-out; }
+    @keyframes flashSuccess { 0% { transform: scale(1); color: gold; } 50% { transform: scale(1.1); color: gold; } 100% { transform: scale(1); color: gold; } }    
+    .maintain {color: orange;animation: flashMaintain 2s infinite;}
+    .mainfail {color: red;animation: flashFail 1s infinite;}
+    @keyframes flashFail {  0% { text-shadow: 0 0 15px red }  50% { text-shadow: 0 0 30px red; color: red; }  100% { text-shadow: 0 0 15px red }}
+    .destroy { color: red; animation: flashDestroy 1s infinite; }
+    @keyframes flashDestroy { 0% { text-shadow: 0 0 10px red; color: darkred; } 50% { text-shadow: 0 0 20px red; color: red; } 100% { text-shadow: 0 0 10px red; color: darkred; } }
+
+    /* 特效元素 */
+    #particle-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    /* 从底部升起的激光束 */
+    #effect-beam {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 20px;
+      height: 0;
+      background: linear-gradient(to top, rgba(255,255,0,0.8), rgba(255,255,255,0));
+      transform: translateX(-50%) scaleY(0);
+      transform-origin: bottom;
+      pointer-events: none;
+    }
+    /* 全屏红色闪烁层（破坏时） */
+    #effect-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: red;
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="content">
+    <!-- 特效容器 -->
+    <div id="particle-container"></div>
+    <div id="effect-beam"></div>
+    <div id="effect-overlay"></div>
+
+    <h1>DNF 研磨模拟器</h1>
+    <p id="stage">当前研磨阶段: 0</p>
+    <p id="probabilities">概率 - 成功: 45%, 维持: 55%, 失败: 0%, 破坏: 0%</p>
+    <p id="materials">
+      催化剂: <span id="catalysts">2</span><br>
+      高级碳: <span id="sangrako">3</span><br>
+      金币: <span id="gold">6,200,000</span> 金币
+    </p>
+    <div class="button-row">
+      <button id="enhanceBtn">研磨</button>
+      <button id="cheatBtn">作弊</button>
+      <button id="resetBtn">重置</button>
+    </div>
+    <div class="input-row">
+      <label for="targetInput">目标阶段</label>
+      <input type="number" id="targetInput" min="1" max="10" placeholder="目标阶段" title="目标研磨阶段">
+    </div>
+    <div class="input-row">
+      <label for="intervalInput">研磨间隔时间 (秒)</label>
+      <input type="number" id="intervalInput" min="0.01" step="0.01" placeholder="间隔时间" title="研磨间隔时间" value="1">
+    </div>
+    <div class="input-row">
+      <button id="toggleAutoBtn">开始自动研磨</button>
+    </div>
+    <p id="result"></p>
+    <p id="totalUsed">
+      消耗的催化剂: <span id="totalCatalystsUsed">0</span><br>
+      消耗的高级碳: <span id="totalSangrakoUsed">0</span><br>
+      消耗的金币: <span id="totalGoldUsed">0</span>
+    </p>
+    <p id="highestStage">最高研磨阶段: <span id="highestStageValue">0</span></p>
+    <p id="totalAttempts">总研磨次数: <span id="totalAttemptsValue">0</span></p>
+  </div>
+
+  <script>
+    // 工具函数
+    function formatNumber(num) { return num.toLocaleString(); }
+    function formatDecimal(num, decimals) { return num.toFixed(decimals); }
+
+    // 各阶段参数配置
+    const stages = [
+      { success: 45, maintain: 55, fail: 0, destroy: 0, catalysts: 2, sangrako: 3, gold: 6200000 },
+      { success: 30, maintain: 40, fail: 30, destroy: 0, catalysts: 2, sangrako: 3, gold: 7502000 },
+      { success: 22, maintain: 46, fail: 30, destroy: 2, catalysts: 2, sangrako: 4, gold: 8900700 },
+      { success: 20, maintain: 45, fail: 30, destroy: 5, catalysts: 3, sangrako: 4, gold: 10427000 },
+      { success: 17, maintain: 44, fail: 30, destroy: 9, catalysts: 3, sangrako: 5, gold: 12254000 },
+      { success: 15, maintain: 42, fail: 30, destroy: 13, catalysts: 3, sangrako: 5, gold: 13979000 },
+      { success: 13, maintain: 44, fail: 30, destroy: 17, catalysts: 4, sangrako: 6, gold: 15806000 },
+      { success: 11, maintain: 46, fail: 30, destroy: 21, catalysts: 4, sangrako: 6, gold: 17781000 },
+      { success: 9,  maintain: 48, fail: 30, destroy: 25, catalysts: 4, sangrako: 7, gold: 19881000 },
+      { success: 7,  maintain: 50, fail: 30, destroy: 29, catalysts: 5, sangrako: 7, gold: 22136000 }
+    ];
+
+    let currentStage = 0;
+    let highestStage = 0;
+    let totalCatalystsUsed = 0;
+    let totalSangrakoUsed = 0;
+    let totalGoldUsed = 0;
+    let totalAttempts = 0;
+    let autoMode = false;
+    let targetStage = 10;
+    let autoModeType = '';
+    let autoEnhanceInterval;
+    let intervalTime = 1000;
+
+    function updateUI() {
+      const stageData = stages[currentStage] || stages[0];
+      document.getElementById('stage').innerText = `当前研磨阶段: ${currentStage}`;
+      document.getElementById('probabilities').innerText = `概率 - 成功: ${stageData.success}%, 维持: ${stageData.maintain}%, 失败: ${stageData.fail}%, 破坏: ${stageData.destroy}%`;
+      document.getElementById('catalysts').innerText = formatNumber(stageData.catalysts);
+      document.getElementById('sangrako').innerText = formatNumber(stageData.sangrako);
+      document.getElementById('gold').innerText = formatNumber(stageData.gold);
+      document.getElementById('totalCatalystsUsed').innerText = formatNumber(totalCatalystsUsed);
+      document.getElementById('totalSangrakoUsed').innerText = formatNumber(totalSangrakoUsed);
+      document.getElementById('totalGoldUsed').innerText = formatNumber(totalGoldUsed);
+      document.getElementById('highestStageValue').innerText = formatNumber(highestStage);
+      document.getElementById('totalAttemptsValue').innerText = formatNumber(totalAttempts);
+    }
+
+    /* ====== 特效函数 ====== */
+    // 激光束效果（从底部向上发射）
+    function beamEffect() {
+        const beam = document.getElementById('effect-beam');
+        
+        // 设置激光束初始状态
+        gsap.set(beam, { scaleY: 0, opacity: 1 });
+        
+        // 激光束动画
+        gsap.to(beam, {
+            duration: 0.8,
+            scaleY: 8,
+            opacity: 0,
+            ease: "power2.out"
+        });
+
+        // 添加粒子效果（假设粒子类为 .particle）
+        const particles = document.querySelectorAll('.particle');
+        particles.forEach(particle => {
+            gsap.fromTo(particle, 
+            { opacity: 0, scale: 0 }, 
+            {
+                opacity: 1,
+                scale: 2,
+                x: Math.random() * 100 - 50,  // 随机位移
+                y: Math.random() * 100 - 50,  // 随机位移
+                duration: 0.6,
+                repeat: -1,
+                repeatDelay: 0.2,
+                ease: "power2.out"
+            }
+            );
+        });
+    }
+
+
+    // 火花效果（小颗粒向四周飞散）
+    function sparkleEffect() {
+        const container = document.getElementById('particle-container');
+        
+        // 火花的数量
+        const sparkleCount = 20;
+
+        for (let i = 0; i < sparkleCount; i++) {
+            const sparkle = document.createElement('div');
+            sparkle.style.position = 'absolute';
+            sparkle.style.left = '50%';
+            sparkle.style.top = '50%';
+            sparkle.style.width = `${gsap.utils.random(8, 24)}px`; // 随机大小
+            sparkle.style.height = sparkle.style.width;
+            sparkle.style.borderRadius = '50%';
+            sparkle.style.background = gsap.utils.random(['#ffeb3b', '#ffd700', '#fffacd', '#ff69b4', '#ff4500']); // 更多颜色
+            container.appendChild(sparkle);
+            
+            // 火花动画效果
+            gsap.to(sparkle, {
+            duration: gsap.utils.random(0.6, 1.2), // 火花飞散的时间范围
+            x: gsap.utils.random(-150, 150), // 随机水平运动
+            y: gsap.utils.random(-150, 150), // 随机垂直运动
+            scale: gsap.utils.random(0.5, 1.5), // 随机缩放
+            opacity: 0,
+            ease: "power2.out",
+            onComplete: () => sparkle.remove() // 动画完成后移除火花
+            });
+        }
+        }
+        
+    // 红色闪烁覆盖层（破坏时）
+    function redFlashEffect() {
+      const overlay = document.getElementById('effect-overlay');
+      gsap.set(overlay, { opacity: 0.7 });
+      gsap.to(overlay, { duration: 0.4, opacity: 0, ease: "power2.out" });
+    }
+
+    // 爆炸效果和面板震动（破坏时）
+    function explosionEffect() {
+      const container = document.getElementById('particle-container');
+      for (let i = 0; i < 30; i++) {
+        const particle = document.createElement('div');
+        particle.style.position = 'absolute';
+        particle.style.left = '50%';
+        particle.style.top = '50%';
+        particle.style.width = '10px';
+        particle.style.height = '10px';
+        particle.style.borderRadius = '50%';
+        particle.style.backgroundColor = gsap.utils.random(['#ff0000', '#ff5722', '#ff9800']);
+        container.appendChild(particle);
+        gsap.to(particle, {
+          duration: 1.2,
+          x: gsap.utils.random(-200, 200),
+          y: gsap.utils.random(-200, 200),
+          opacity: 0,
+          ease: "power4.out",
+          onComplete: () => particle.remove()
+        });
+      }
+      // 面板震动
+      gsap.fromTo("#content", { x: -10 }, { x: 10, duration: 0.1, yoyo: true, repeat: 5, ease: "power1.inOut" });
+    }
+    
+    /* ====== 研磨逻辑 ====== */
+    function enhance() {
+      if (currentStage >= 10) return;
+      const resultElem = document.getElementById('result');
+      resultElem.innerText = "研磨中...";
+      resultElem.className = "enhancing";
+
+      setTimeout(() => {
+        const stageData = stages[currentStage] || stages[0];
+        totalCatalystsUsed += stageData.catalysts;
+        totalSangrakoUsed += stageData.sangrako;
+        totalGoldUsed += stageData.gold;
+        totalAttempts++;
+
+        let outcomeText = "";
+        let outcomeClass = "";
+        if (document.getElementById('cheatBtn').classList.contains('active')) {
+          currentStage++;
+          outcomeText = "作弊成功! 研磨阶段上升。";
+          outcomeClass = "success";
+        } else {
+          const random = Math.random() * 100;
+          if (random < stageData.success) {
+            currentStage++;
+            outcomeText = "成功! 研磨阶段上升。";
+            outcomeClass = "success";
+          } else if (random < stageData.success + stageData.maintain) {
+            outcomeText = "维持! 研磨阶段不变。";
+            outcomeClass = "maintain";
+          } else if (random < stageData.success + stageData.maintain + stageData.fail) {
+            currentStage = Math.max(0, currentStage - 1);
+            outcomeText = "失败! 研磨阶段降低。";
+            outcomeClass = "mainfail"; // 使用新的 mainfail 类
+          } else {
+            currentStage = 0;
+            outcomeText = "研磨破坏!";
+            outcomeClass = "destroy";
+          }
+        }
+
+        resultElem.innerText = outcomeText;
+        resultElem.className = outcomeClass;
+
+        // 根据结果触发特效（DNF 风格）
+        if (outcomeClass === 'success') {
+          beamEffect();
+          sparkleEffect();
+          
+        } else if (outcomeClass === 'destroy') {
+          redFlashEffect();
+          explosionEffect();
+          
+        }
+
+        if (currentStage > highestStage) highestStage = currentStage;
+        updateUI();
+
+        if (currentStage >= 10) {
+          autoMode = false;
+          autoModeType = '';
+          document.getElementById('toggleAutoBtn').innerText = '开始自动研磨';
+          resultElem.innerText = '恭喜你达到了最高阶段！';
+          document.getElementById('enhanceBtn').disabled = true;
+          document.getElementById('toggleAutoBtn').disabled = true;
+          document.getElementById('cheatBtn').disabled = true;
+          document.getElementById('resetBtn').style.display = 'inline-block';
+        }
+      }, 200);
+    }
+
+    function autoEnhance() {
+      if (autoMode) {
+        if ((autoModeType === 'auto' && currentStage < 10) ||
+            (autoModeType === 'toTarget' && currentStage < targetStage)) {
+          enhance();
+          autoEnhanceInterval = setTimeout(autoEnhance, intervalTime);
+        } else {
+          autoMode = false;
+          autoModeType = '';
+          document.getElementById('toggleAutoBtn').innerText = '开始自动研磨';
+          document.getElementById('result').innerText = '自动研磨结束';
+          clearTimeout(autoEnhanceInterval);
+        }
+      }
+    }
+
+    /* ====== 事件绑定 ====== */
+    document.getElementById('enhanceBtn').addEventListener('click', enhance);
+    document.getElementById('toggleAutoBtn').addEventListener('click', function() {
+      if (!autoMode) {
+        const targetInput = document.getElementById('targetInput');
+        let target = parseInt(targetInput.value, 10);
+        if (isNaN(target) || target < 1 || target > 10) {
+          target = 10;
+          document.getElementById('result').innerText = '未输入目标阶段，自动设置为最高阶段10。';
+        }
+        targetInput.value = target;
+        targetStage = target;
+        const intervalInput = document.getElementById('intervalInput');
+        let interval = parseFloat(intervalInput.value);
+        if (isNaN(interval) || interval <= 0) { interval = 1; }
+        intervalTime = interval * 1000;
+        if (intervalTime < 10) {
+          intervalTime = 10;
+          intervalInput.value = formatDecimal(intervalTime / 1000, 2);
+          document.getElementById('result').innerText = '时间间隔过小，已自动设置为最小间隔 10ms。';
+        } else {
+          intervalInput.value = formatDecimal(interval, 2);
+        }
+        autoModeType = target === 10 ? 'auto' : 'toTarget';
+        autoMode = true;
+        this.innerText = '停止自动研磨';
+        autoEnhance();
+      } else {
+        autoMode = false;
+        this.innerText = '开始自动研磨';
+        document.getElementById('result').innerText = '自动研磨已停止';
+        clearTimeout(autoEnhanceInterval);
+      }
+    });
+
+    document.getElementById('cheatBtn').addEventListener('click', function() {
+      this.classList.toggle('active');
+      document.getElementById('result').innerText = this.classList.contains('active')
+        ? '作弊模式已激活: 下一次研磨必定成功!'
+        : '作弊模式已关闭';
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', function() {
+      autoMode = false;
+      autoModeType = '';
+      clearTimeout(autoEnhanceInterval);
+      currentStage = 0;
+      highestStage = 0;
+      totalCatalystsUsed = 0;
+      totalSangrakoUsed = 0;
+      totalGoldUsed = 0;
+      totalAttempts = 0;
+      document.getElementById('enhanceBtn').disabled = false;
+      document.getElementById('toggleAutoBtn').disabled = false;
+      document.getElementById('cheatBtn').disabled = false;
+      document.getElementById('toggleAutoBtn').innerText = '开始自动研磨';
+      document.getElementById('result').innerText = '重置成功，当前研磨值已归零。';
+      document.getElementById('resetBtn').style.display = 'inline-block';
+      updateUI();
+    });
+
+    // 初始设置默认研磨间隔
+    document.getElementById('intervalInput').value = formatDecimal(intervalTime / 1000, 2);
+    updateUI();
+  </script>
+</body>
+</html>

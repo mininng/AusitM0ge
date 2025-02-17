@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精炼模拟器</title>
+    <title>研磨模拟器</title>
     <style>
         body {
             margin: 0;
@@ -96,8 +96,8 @@
 </head>
 <body>
     <div id="content">
-        <h1>精炼模拟器</h1>
-        <p id="stage">当前精炼等级: 0</p>
+        <h1>研磨模拟器</h1>
+        <p id="stage">当前研磨等级: 0</p>
         <p id="probabilities">概率 - 成功: 45%, 维持: 55%, 失败: 0%, 破坏: 0%</p>
         <p id="materials">
             催化剂: <span id="catalysts">2</span><br>
@@ -107,22 +107,22 @@
         
         <!-- 按钮行 -->
         <div class="button-row">
-            <button id="enhanceBtn">精炼</button>
+            <button id="enhanceBtn">研磨</button>
             <button id="cheatBtn">作弊</button>
             <button id="resetBtn">重置</button>
         </div>
 
-        <!-- 自动精炼控制区域 -->
+        <!-- 自动研磨控制区域 -->
         <div class="input-row">
             <label for="targetInput">目标阶段</label>
-            <input type="number" id="targetInput" min="1" max="10" placeholder="目标阶段" title="目标精炼阶段">
+            <input type="number" id="targetInput" min="1" max="10" placeholder="目标阶段" title="目标研磨阶段">
         </div>
         <div class="input-row">
-            <label for="intervalInput">精炼间隔时间 (秒)</label>
-            <input type="number" id="intervalInput" min="0.01" step="0.01" placeholder="间隔时间" title="精炼间隔时间" value="1">
+            <label for="intervalInput">研磨间隔时间 (秒)</label>
+            <input type="number" id="intervalInput" min="0.01" step="0.01" placeholder="间隔时间" title="研磨间隔时间" value="1">
         </div>
         <div class="input-row">
-            <button id="toggleAutoBtn">开始自动精炼</button>
+            <button id="toggleAutoBtn">开始自动研磨</button>
         </div>
 
         <p id="result"></p>
@@ -131,8 +131,8 @@
             到目前为止消耗的高级莱恩矿石: <span id="totalSangrakoUsed">0</span><br>
             到目前为止消耗的金币: <span id="totalGoldUsed">0</span>
         </p>
-        <p id="highestStage">到目前为止成功的最高精炼阶段: <span id="highestStageValue">0</span></p>
-        <p id="totalAttempts">总精炼次数: <span id="totalAttemptsValue">0</span></p>
+        <p id="highestStage">到目前为止成功的最高研磨阶段: <span id="highestStageValue">0</span></p>
+        <p id="totalAttempts">总研磨次数: <span id="totalAttemptsValue">0</span></p>
     </div>
 
     <script>
@@ -167,11 +167,11 @@
         let targetStage = 10; // 默认目标阶段为 10
         let autoModeType = ''; // 'auto' or 'toTarget'
         let autoEnhanceInterval;
-        let intervalTime = 1000; // 默认精炼间隔时间为 1 秒
+        let intervalTime = 1000; // 默认研磨间隔时间为 1 秒
 
         function updateUI() {
             const stageData = stages[currentStage] || stages[0];
-            document.getElementById('stage').innerText = `当前精炼等级: ${currentStage}`;
+            document.getElementById('stage').innerText = `当前研磨等级: ${currentStage}`;
             document.getElementById('probabilities').innerText = `概率 - 成功: ${stageData.success}%, 维持: ${stageData.maintain}%, 失败: ${stageData.fail}%, 破坏: ${stageData.destroy}%`;
             document.getElementById('catalysts').innerText = formatNumber(stageData.catalysts);
             document.getElementById('sangrako').innerText = formatNumber(stageData.sangrako);
@@ -195,7 +195,7 @@
 
             if (document.getElementById('cheatBtn').classList.contains('active')) {
                 currentStage++;
-                document.getElementById('result').innerText = '作弊成功! 精炼阶段上升。';
+                document.getElementById('result').innerText = '作弊成功! 研磨阶段上升。';
             } else {
                 const random = Math.random() * 100;
 
@@ -203,13 +203,13 @@
                     currentStage++;
                     document.getElementById('result').innerText = '成功! 阶段上升。';
                 } else if (random < stageData.success + stageData.maintain) {
-                    document.getElementById('result').innerText = '维持! 精炼阶段不变。';
+                    document.getElementById('result').innerText = '维持! 研磨阶段不变。';
                 } else if (random < stageData.success + stageData.maintain + stageData.fail) {
                     currentStage--;
-                    document.getElementById('result').innerText = '失败! 精炼阶段不变。';
+                    document.getElementById('result').innerText = '失败! 研磨阶段不变。';
                 } else {
                     currentStage = 0;
-                    document.getElementById('result').innerText = '精炼破坏!';
+                    document.getElementById('result').innerText = '研磨破坏!';
                 }
             }
 
@@ -222,7 +222,7 @@
             if (currentStage >= 10) {
                 autoMode = false;
                 autoModeType = '';
-                document.getElementById('toggleAutoBtn').innerText = '开始自动精炼';
+                document.getElementById('toggleAutoBtn').innerText = '开始自动研磨';
                 document.getElementById('result').innerText = '恭喜你达到了最高阶段！';
                 document.getElementById('enhanceBtn').disabled = true;
                 document.getElementById('toggleAutoBtn').disabled = true;
@@ -242,8 +242,8 @@
                 } else {
                     autoMode = false;
                     autoModeType = '';
-                    document.getElementById('toggleAutoBtn').innerText = '开始自动精炼';
-                    document.getElementById('result').innerText = '自动精炼结束';
+                    document.getElementById('toggleAutoBtn').innerText = '开始自动研磨';
+                    document.getElementById('result').innerText = '自动研磨结束';
                     clearTimeout(autoEnhanceInterval);
                 }
             }
@@ -280,19 +280,19 @@
 
                 autoModeType = target === 10 ? 'auto' : 'toTarget';
                 autoMode = true;
-                this.innerText = '停止自动精炼';
+                this.innerText = '停止自动研磨';
                 autoEnhance();
             } else {
                 autoMode = false;
-                this.innerText = '开始自动精炼';
-                document.getElementById('result').innerText = '自动精炼已停止';
+                this.innerText = '开始自动研磨';
+                document.getElementById('result').innerText = '自动研磨已停止';
                 clearTimeout(autoEnhanceInterval);
             }
         });
 
         document.getElementById('cheatBtn').addEventListener('click', function() {
             this.classList.toggle('active');
-            document.getElementById('result').innerText = this.classList.contains('active') ? '作弊模式已激活: 下一次精炼必定成功!' : '作弊模式已关闭';
+            document.getElementById('result').innerText = this.classList.contains('active') ? '作弊模式已激活: 下一次研磨必定成功!' : '作弊模式已关闭';
         });
 
         document.getElementById('resetBtn').addEventListener('click', function() {
@@ -308,13 +308,13 @@
             document.getElementById('enhanceBtn').disabled = false;
             document.getElementById('toggleAutoBtn').disabled = false;
             document.getElementById('cheatBtn').disabled = false;
-            document.getElementById('toggleAutoBtn').innerText = '开始自动精炼'; // 重置按钮文字
-            document.getElementById('result').innerText = '重置成功，当前精炼值已归零。';
+            document.getElementById('toggleAutoBtn').innerText = '开始自动研磨'; // 重置按钮文字
+            document.getElementById('result').innerText = '重置成功，当前研磨值已归零。';
             document.getElementById('resetBtn').style.display = 'inline-block';
             updateUI();
         });
 
-        // 初始加载时设置精炼间隔时间的默认值
+        // 初始加载时设置研磨间隔时间的默认值
         document.getElementById('intervalInput').value = formatDecimal(intervalTime / 1000, 2);
 
         updateUI();
