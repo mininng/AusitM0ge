@@ -159,7 +159,7 @@
       消耗的高级碳: <span id="totalSangrakoUsed">0</span><br>
       消耗的金币: <span id="totalGoldUsed">0</span>
     </p>
-    <p id="highestStage">最高研磨阶段: <span id="highestStageValue">0</span></p>
+    <p id="highestStage">到目前为止的最高研磨阶段: <span id="highestStageValue">0</span></p>
     <p id="totalAttempts">总研磨次数: <span id="totalAttemptsValue">0</span></p>
   </div>
 
@@ -343,7 +343,6 @@
       resultElem.innerText = "研磨中...";
       resultElem.className = "enhancing";
 
-      setTimeout(() => {
         const stageData = stages[currentStage] || stages[0];
         totalCatalystsUsed += stageData.catalysts;
         totalSangrakoUsed += stageData.sangrako;
@@ -405,24 +404,35 @@
           document.getElementById('cheatBtn').disabled = true;
           document.getElementById('resetBtn').style.display = 'inline-block';
         }
-      }, 200);
     }
 
+    let enhancing = false; // 添加一个标志，防止重复执行 enhance()
+
     function autoEnhance() {
-      if (autoMode) {
-        if ((autoModeType === 'auto' && currentStage < 10) ||
-            (autoModeType === 'toTarget' && currentStage < targetStage)) {
-          enhance();
-          autoEnhanceInterval = setTimeout(autoEnhance, intervalTime);
-        } else {
-          autoMode = false;
-          autoModeType = '';
-          document.getElementById('toggleAutoBtn').innerText = '开始自动研磨';
-          document.getElementById('result').innerText = '自动研磨结束';
-          clearTimeout(autoEnhanceInterval);
-        }
+      if (!autoMode) return; // 确保只有在 autoMode 运行时才继续
+
+      if ((autoModeType === 'auto' && currentStage < 10) ||
+          (autoModeType === 'toTarget' && currentStage < targetStage)) {
+        
+        if (enhancing) return; // 如果正在研磨，不执行新一轮 enhance()
+
+        enhancing = true; // 标记正在研磨
+        enhance();  // 执行研磨
+        setTimeout(() => {
+          enhancing = false; // 研磨完成，解除标记
+          autoEnhance(); // 继续下一次研磨
+        }, intervalTime);
+
+      } else {
+        autoMode = false;
+        autoModeType = '';
+        document.getElementById('toggleAutoBtn').innerText = '开始自动研磨';
+        document.getElementById('result').innerText = '自动研磨结束';
+        clearTimeout(autoEnhanceInterval);
       }
     }
+
+
 
     /* ====== 事件绑定 ====== */
     document.getElementById('enhanceBtn').addEventListener('click', enhance);
@@ -453,6 +463,7 @@
         autoEnhance();
       } else {
         autoMode = false;
+        autoModeType = '';
         this.innerText = '开始自动研磨';
         document.getElementById('result').innerText = '自动研磨已停止';
         clearTimeout(autoEnhanceInterval);
